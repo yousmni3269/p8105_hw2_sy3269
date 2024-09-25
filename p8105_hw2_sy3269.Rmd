@@ -7,16 +7,16 @@ output: github_document
 
 ```{r setup, echo = FALSE, message = FALSE}
 library(tidyverse)
+library(readxl)
 ```
 
-Required packages (e.g.`tidyverse`) are installed. 
-
+Required packages (e.g.`tidyverse` and `readxl`) are installed. 
 
 # Problem 1 
 
-Read and clean NYC subway data. Then convert the entry variable from character to a logical variable. 
+Import and clean NYC subway data. Then convert the entry variable from character to a logical variable. 
 
-```{r clean_data}
+```{r metro data}
 metro_df = 
   read_csv("./NYC_Transit_Subway_Entrance_And_Exit_Data.csv",  na = c("NA", "", ".")) |>
   janitor::clean_names() |>
@@ -33,25 +33,21 @@ metro_df
 
 The NYC metro data set contains line, station name, station location (latitude and longitude), routes served, entry and vending availability, entrance type, and ada compliance information. The data set was first imported and cleaned using a `janitor::clean_names` function. Then only the required variables were listed out to remove unnecessary information from the data set. The dimension of the data set is `r nrow(metro_df)` x `r ncol(metro_df)`. The data set is in human readable form but not yet tidy.  
 
-```{r ada_stn}
-stn_num = distinct(metro_df, station_name, line) |>
-  count()
-  
-ada_num = filter(metro_df, ada == TRUE) |>
-  count()
+```{r ada station}
+unique_stn = distinct(metro_df, station_name, line, ada)
+ada_stn = select(unique_stn, ada == TRUE)
 ```
 
+There are `r count(unique_stn)` distinct stations and there are `r count(ada_stn)` ADA compliant stations. 
 
-There are `r stn_num` distinct stations and there are `r ada_num` ADA compliant stations. 
-
-```{r nv_stn}
+```{r, no vending station}
 nv_stn = filter(metro_df, vending == "NO")
 nv_entry_stn = filter(nv_stn, entry == TRUE)
 ```
 
 `r count(nv_entry_stn)` stations out of `r count(nv_stn)` stations without vending allow entrance. The proportion is about `r count(nv_stn)/count(nv_entry_stn)`. 
 
-```{r reformatting}
+```{r, reformatting}
 new_metro_df = 
   read_csv("./NYC_Transit_Subway_Entrance_And_Exit_Data.csv", na = c("NA", "", ".")) |>
   janitor::clean_names() |> 
@@ -73,12 +69,71 @@ new_metro_df =
 
 The data set was reformatted so that `route number` and `route name` are distinct variables. 
 
-```{r stn_for_A}
-stn_for_A = filter(new_metro_df, route_name == "A") |>
-  distinct()
-
+```{r, station for A}
+stn_for_A = distinct(new_metro_df, route_name == "A") 
 stn_for_A_ada = filter(stn_for_A, ada == TRUE)
 ```
 
 There are `r count(stn_for_A)` stations that serve the A train and `r count(stn_for_A_ada)` of these stations are ADA compliant. 
+
+
+# Problem 2 
+
+Import and clean the Mr. Trash Wheel data. 
+
+```{r, mr trash wheel}
+mr_tw_df = read_excel(
+  "./202309 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", 
+  skip = 1, 
+  n_max = 584,
+  na = c("NA", "", ".")) |>
+  janitor::clean_names() |>
+  mutate(
+    sports_balls = as.integer(sports_balls),
+    year = as.integer(year))
+
+mr_tw_df = 
+  select(mr_tw_df, -starts_with("...")) |> 
+  mutate(trash_wheel_type = "mr_trash_wheel")
+```
+
+
+Similarly, import and clean Professor Trash Wheel and Gwynnda Trash Wheel. Then, combine with the Mr. Trash Wheel data set. 
+
+``` {r professor and gwynnda}
+prof_tw_df = read_excel(
+  "./202309 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", 
+  skip = 1, 
+  n_max = 106, 
+  na = c("NA", "", ".")) |>
+  janitor::clean_names() |>
+  mutate(
+    sports_balls = NA, 
+    trash_wheel_type = "professor_trash_wheel") |>
+  select(dumpster:wrappers, sports_balls, homes_powered)
+
+gwyn_tw_df = read_excel(
+  "./202309 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel", 
+  skip = 1, 
+  n_max = 154,
+  na = c("NA", "", ".")) |>
+  janitor::clean_names() |>
+  mutate(
+    glass_bottles = NA,
+    sports_balls = NA, 
+    trash_wheel_type = "gwynnda_trash_wheel") |>
+  select(dumpster:cigarette_butts, glass_bottles, plastic_bags, wrappers, sports_balls, homes_powered)
+
+com_tw_df = bind_rows(prof_tw_df, gwyn_tw_df, mr_tw_df)
+```
+
+To combine the data sets into one, I added two additional columns for glass bottles and sports balls to `gwyn_tw_df` data set and one column for sports balls to `prof_tw_df` data set. 
+Then, for all three types of data set, I added a new variable named `trash_wheel_type` to keep track of which trash wheel data is which. 
+
+I need to add a summary of the data set. 
+
+Be sure to note the number of observations in the resulting dataset, and give examples of key variables. For available data, what was the total weight of trash collected by Professor Trash Wheel? What was the total number of cigarette butts collected by Gwynnda in June of 2022?
+
+# Problem 3
+
 
