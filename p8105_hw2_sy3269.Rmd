@@ -1,0 +1,84 @@
+---
+title: "p8105_hw2_sy3269.Rmd"
+author: Soomin You 
+date: 2024-09-25
+output: github_document 
+---
+
+```{r setup, echo = FALSE, message = FALSE}
+library(tidyverse)
+```
+
+Required packages (e.g.`tidyverse`) are installed. 
+
+
+# Problem 1 
+
+Read and clean NYC subway data. Then convert the entry variable from character to a logical variable. 
+
+```{r clean_data}
+metro_df = 
+  read_csv("./NYC_Transit_Subway_Entrance_And_Exit_Data.csv",  na = c("NA", "", ".")) |>
+  janitor::clean_names() |>
+  select(line:route11, entry, vending, entrance_type, ada) |>
+  mutate(
+    entry = case_match(
+      entry, 
+      "YES" ~ TRUE,
+      "NO" ~ FALSE
+    ))
+
+metro_df
+```
+
+The NYC metro data set contains line, station name, station location (latitude and longitude), routes served, entry and vending availability, entrance type, and ada compliance information. The data set was first imported and cleaned using a `janitor::clean_names` function. Then only the required variables were listed out to remove unnecessary information from the data set. The dimension of the data set is `r nrow(metro_df)` x `r ncol(metro_df)`. The data set is in human readable form but not yet tidy.  
+
+```{r ada_stn}
+stn_num = distinct(metro_df, station_name, line) |>
+  count()
+  
+ada_num = filter(metro_df, ada == TRUE) |>
+  count()
+```
+
+
+There are `r stn_num` distinct stations and there are `r ada_num` ADA compliant stations. 
+
+```{r nv_stn}
+nv_stn = filter(metro_df, vending == "NO")
+nv_entry_stn = filter(nv_stn, entry == TRUE)
+```
+
+`r count(nv_entry_stn)` stations out of `r count(nv_stn)` stations without vending allow entrance. The proportion is about `r count(nv_stn)/count(nv_entry_stn)`. 
+
+```{r reformatting}
+new_metro_df = 
+  read_csv("./NYC_Transit_Subway_Entrance_And_Exit_Data.csv", na = c("NA", "", ".")) |>
+  janitor::clean_names() |> 
+  mutate(
+    route7 = as.character(route7),
+    route8 = as.character(route8),
+    route9 = as.character(route9),
+    route10 = as.character(route10),
+    route11 = as.character(route11)
+  ) |> 
+  select(line, station_name, route1:route11, entry, vending, entrance_type, ada) |>
+  pivot_longer( 
+    cols = route1:route11,
+    names_to = "route_number",
+    values_to = "route_name",
+    names_prefix = "route"
+  )
+```
+
+The data set was reformatted so that `route number` and `route name` are distinct variables. 
+
+```{r stn_for_A}
+stn_for_A = filter(new_metro_df, route_name == "A") |>
+  distinct()
+
+stn_for_A_ada = filter(stn_for_A, ada == TRUE)
+```
+
+There are `r count(stn_for_A)` stations that serve the A train and `r count(stn_for_A_ada)` of these stations are ADA compliant. 
+
