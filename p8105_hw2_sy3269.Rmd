@@ -35,7 +35,7 @@ The NYC metro data set contains line, station name, station location (latitude a
 
 ```{r ada station}
 unique_stn = distinct(metro_df, station_name, line, ada)
-ada_stn = select(unique_stn, ada == TRUE)
+ada_stn = filter(unique_stn, ada == TRUE)
 ```
 
 There are `r count(unique_stn)` distinct stations and there are `r count(ada_stn)` ADA compliant stations. 
@@ -70,7 +70,7 @@ new_metro_df =
 The data set was reformatted so that `route number` and `route name` are distinct variables. 
 
 ```{r, station for A}
-stn_for_A = distinct(new_metro_df, route_name == "A") 
+stn_for_A = distinct(new_metro_df, route_name == "A", ada) 
 stn_for_A_ada = filter(stn_for_A, ada == TRUE)
 ```
 
@@ -93,24 +93,22 @@ mr_tw_df = read_excel(
     year = as.integer(year))
 
 mr_tw_df = 
-  select(mr_tw_df, -starts_with("...")) |> 
+  select(mr_tw_df, -starts_with("x")) |> 
   mutate(trash_wheel_type = "mr_trash_wheel")
 ```
-
 
 Similarly, import and clean Professor Trash Wheel and Gwynnda Trash Wheel. Then, combine with the Mr. Trash Wheel data set. 
 
 ``` {r professor and gwynnda}
-prof_tw_df = read_excel(
-  "./202309 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", 
+prof_tw_df = 
+  read_excel("./202309 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", 
   skip = 1, 
   n_max = 106, 
   na = c("NA", "", ".")) |>
   janitor::clean_names() |>
   mutate(
     sports_balls = NA, 
-    trash_wheel_type = "professor_trash_wheel") |>
-  select(dumpster:wrappers, sports_balls, homes_powered)
+    trash_wheel_type = "professor_trash_wheel") 
 
 gwyn_tw_df = read_excel(
   "./202309 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel", 
@@ -121,18 +119,48 @@ gwyn_tw_df = read_excel(
   mutate(
     glass_bottles = NA,
     sports_balls = NA, 
-    trash_wheel_type = "gwynnda_trash_wheel") |>
-  select(dumpster:cigarette_butts, glass_bottles, plastic_bags, wrappers, sports_balls, homes_powered)
+    trash_wheel_type = "gwynnda_trash_wheel")
 
-com_tw_df = bind_rows(prof_tw_df, gwyn_tw_df, mr_tw_df)
+comb_tw_df = bind_rows(prof_tw_df, gwyn_tw_df, mr_tw_df)
 ```
 
 To combine the data sets into one, I added two additional columns for glass bottles and sports balls to `gwyn_tw_df` data set and one column for sports balls to `prof_tw_df` data set. 
 Then, for all three types of data set, I added a new variable named `trash_wheel_type` to keep track of which trash wheel data is which. 
 
-I need to add a summary of the data set. 
+```{r, data summary}
+trash_types = 
+  select(comb_tw_df, plastic_bottles:sports_balls) |>
+  names()
 
-Be sure to note the number of observations in the resulting dataset, and give examples of key variables. For available data, what was the total weight of trash collected by Professor Trash Wheel? What was the total number of cigarette butts collected by Gwynnda in June of 2022?
+wgt_prof_tw_df = 
+  select(prof_tw_df, weight_tons) |>
+  sum()
+
+wgt_gwyn_tw_df = select(gwyn_tw_df, weight_tons) |>
+  sum()
+
+wgt_mr_tw_df = select(mr_tw_df, weight_tons) |>
+  sum()
+
+cb_comb_tw_df = 
+  comb_tw_df |>
+  select(cigarette_butts) |>
+  sum()
+  
+cb_gwyn_tw_df = 
+  gwyn_tw_df |>
+  filter(year == 2022, month == "June") |>
+  select(cigarette_butts) |>
+  sum()
+```
+
+In a data set where Professor Trash Wheel, Gwynnda Trash Wheel and Mr. Trash Wheel data all combined, there are total `r nrow(comb_tw_df)` observations, where `r nrow(prof_tw_df)`, `r nrow(gwyn_tw_df)`, and `r nrow(mr_tw_df)` observations came from each respective data set. 
+There are `r length(trash_types)` types of trash collected by the Trash Wheels and they are as follows: `r trash_types`. 
+
+The total weight of trash collected by Professor Trash Wheel is `r wgt_prof_tw_df` tons whereas Gwynnda Trash Wheel and Mr. Trash Wheel collected `r wgt_gwyn_tw_df` tons and `r wgt_mr_tw_df` tons, respectively. 
+
+The total number of cigarette butts collected by three Trash Wheels are `r cb_comb_tw_df` and Gwynnda collected `r cb_gwyn_tw_df` cigarette butts in June of 2022. 
+
 
 # Problem 3
 
