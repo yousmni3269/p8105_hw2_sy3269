@@ -1,7 +1,5 @@
 ---
 title: "p8105_hw2_sy3269.Rmd"
-author: Soomin You 
-date: 2024-09-25
 output: github_document 
 ---
 
@@ -12,11 +10,10 @@ library(readxl)
 
 Required packages (e.g.`tidyverse` and `readxl`) are installed. 
 
+
 # Problem 1 
 
-Import and clean NYC subway data. Then convert the entry variable from character to a logical variable. 
-
-```{r metro data}
+```{r metro_data}
 metro_df = 
   read_csv("./NYC_Transit_Subway_Entrance_And_Exit_Data.csv",  na = c("NA", "", ".")) |>
   janitor::clean_names() |>
@@ -31,19 +28,23 @@ metro_df =
 metro_df
 ```
 
-The NYC metro data set contains line, station name, station location (latitude and longitude), routes served, entry and vending availability, entrance type, and ada compliance information. The data set was first imported and cleaned using a `janitor::clean_names` function. Then only the required variables were listed out to remove unnecessary information from the data set. The dimension of the data set is `r nrow(metro_df)` x `r ncol(metro_df)`. The data set is in human readable form but not yet tidy.  
+The NYC subway data was imported and cleaned using a `janitor::clean_names` function. Then the entry variable was converted from a character variable to a logical one using `case_match`. Then only the required variables were listed out to remove unnecessary information from the data set. 
 
-```{r ada station}
+The NYC metro data set contains line, station name, station location (latitude and longitude), routes served, entry and vending availability, entrance type, and ada compliance information. 
+
+The dimension of the data set is `r nrow(metro_df)` x `r ncol(metro_df)`. The data set is in human readable form but not yet tidy.  
+
+```{r metro_questions}
 unique_stn = distinct(metro_df, station_name, line, ada)
+
 ada_stn = filter(unique_stn, ada == TRUE)
+
+nv_stn = filter(metro_df, vending == "NO")
+
+nv_entry_stn = filter(nv_stn, entry == TRUE)
 ```
 
 There are `r count(unique_stn)` distinct stations and there are `r count(ada_stn)` ADA compliant stations. 
-
-```{r, no vending station}
-nv_stn = filter(metro_df, vending == "NO")
-nv_entry_stn = filter(nv_stn, entry == TRUE)
-```
 
 `r count(nv_entry_stn)` stations out of `r count(nv_stn)` stations without vending allow entrance. The proportion is about `r count(nv_stn)/count(nv_entry_stn)`. 
 
@@ -69,19 +70,19 @@ new_metro_df =
 
 The data set was reformatted so that `route number` and `route name` are distinct variables. 
 
-```{r, station for A}
+```{r, station_for_A}
 stn_for_A = distinct(new_metro_df, route_name == "A", ada) 
+
 stn_for_A_ada = filter(stn_for_A, ada == TRUE)
 ```
 
 There are `r count(stn_for_A)` stations that serve the A train and `r count(stn_for_A_ada)` of these stations are ADA compliant. 
 
 
+
 # Problem 2 
 
-Import and clean the Mr. Trash Wheel data. 
-
-```{r, mr trash wheel}
+```{r, mr_trash_wheel}
 mr_tw_df = read_excel(
   "./202309 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", 
   skip = 1, 
@@ -90,16 +91,21 @@ mr_tw_df = read_excel(
   janitor::clean_names() |>
   mutate(
     sports_balls = as.integer(sports_balls),
-    year = as.integer(year))
+    year = as.integer(year), 
+    trash_wheel_type = "mr_trash_wheel") |>
+  arrange(year, month)
 
 mr_tw_df = 
-  select(mr_tw_df, -starts_with("x")) |> 
-  mutate(trash_wheel_type = "mr_trash_wheel")
+  select(mr_tw_df, -starts_with("x")) 
+
+head(mr_tw_df)
+tail(mr_tw_df)
 ```
 
-Similarly, import and clean Professor Trash Wheel and Gwynnda Trash Wheel. Then, combine with the Mr. Trash Wheel data set. 
+Mr. Trash Wheel excel sheet was imported as `mr_tw_df`and was cleaned. Any unnecessary data such as non-dumpster specific data was removed while cleaning and `trash_wheel_type` variable was added to the data frame so that I can keep track of which trash wheel data is which when I bind this data frame with other trash wheel data. Head and tail of the cleaned data was checked. 
 
-``` {r professor and gwynnda}
+
+``` {r prof_gwyn}
 prof_tw_df = 
   read_excel("./202309 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", 
   skip = 1, 
@@ -108,7 +114,8 @@ prof_tw_df =
   janitor::clean_names() |>
   mutate(
     sports_balls = NA, 
-    trash_wheel_type = "professor_trash_wheel") 
+    trash_wheel_type = "professor_trash_wheel") |>
+  arrange(year, month)
 
 gwyn_tw_df = read_excel(
   "./202309 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel", 
@@ -119,15 +126,23 @@ gwyn_tw_df = read_excel(
   mutate(
     glass_bottles = NA,
     sports_balls = NA, 
-    trash_wheel_type = "gwynnda_trash_wheel")
+    trash_wheel_type = "gwynnda_trash_wheel") |>
+  arrange(year, month)
 
-comb_tw_df = bind_rows(prof_tw_df, gwyn_tw_df, mr_tw_df)
+head(prof_tw_df)
+tail(prof_tw_df)
+head(gwyn_tw_df)
+tail(gwyn_tw_df)
 ```
 
-To combine the data sets into one, I added two additional columns for glass bottles and sports balls to `gwyn_tw_df` data set and one column for sports balls to `prof_tw_df` data set. 
-Then, for all three types of data set, I added a new variable named `trash_wheel_type` to keep track of which trash wheel data is which. 
+Professor Trash Wheel and Gwynnda Trash Wheel excel sheets were also imported and cleaned. Similar to Mr. Trash Wheel data, any variable required for binding later was added to Professor and Gwynnda data sets. I added three additional columns for glass bottles, sports balls and trash wheel type to Gywnnda; I added two columns for sports balls and trash wheel type to Professor. 
 
-```{r, data summary}
+Head and tail of each cleaned data set was checked. 
+
+
+```{r three_summary}
+comb_tw_df = bind_rows(prof_tw_df, gwyn_tw_df, mr_tw_df) 
+
 trash_types = 
   select(comb_tw_df, plastic_bottles:sports_balls) |>
   names()
@@ -154,8 +169,11 @@ cb_gwyn_tw_df =
   sum()
 ```
 
-In a data set where Professor Trash Wheel, Gwynnda Trash Wheel and Mr. Trash Wheel data all combined, there are total `r nrow(comb_tw_df)` observations, where `r nrow(prof_tw_df)`, `r nrow(gwyn_tw_df)`, and `r nrow(mr_tw_df)` observations came from each respective data set. 
-There are `r length(trash_types)` types of trash collected by the Trash Wheels and they are as follows: `r trash_types`. 
+Professor Trash Wheel, Gwynnda Trash Wheel and Mr. Trash Wheel data were all combined into one data set named `comb_tw_df`. In the merged data set, total `r nrow(comb_tw_df)` observations were found, where `r nrow(prof_tw_df)` observations came from Professor Trash Wheel, `r nrow(gwyn_tw_df)` from Gwynnda Trash Wheel, and `r nrow(mr_tw_df)` from Mr. Trash Wheel. 
+
+The observations are collected from May 2014 to June 2023 by Mr. Trash Wheel; 2017 April to June 2023, Professor Trash Wheel; August 2021 to May 2023, Gwynnda Trash Wheel. 
+
+There are `r length(trash_types)` types of trash collected by three different Trash Wheels and they are as follows: `r trash_types`. 
 
 The total weight of trash collected by Professor Trash Wheel is `r wgt_prof_tw_df` tons whereas Gwynnda Trash Wheel and Mr. Trash Wheel collected `r wgt_gwyn_tw_df` tons and `r wgt_mr_tw_df` tons, respectively. 
 
@@ -163,5 +181,85 @@ The total number of cigarette butts collected by three Trash Wheels are `r cb_co
 
 
 # Problem 3
+
+```{r gbboff_first}
+bakers_df = 
+  read_csv("./gbb_datasets/bakers.csv", na = c("NA", "", ".")) |>
+  janitor::clean_names() |>
+  separate(
+    baker_name, into = c("first_name", "last_name"), sep = " "
+  ) |>
+  arrange(series) |>
+  relocate(series, first_name)
+      
+bakes_df = 
+  read_csv("./gbb_datasets/bakes.csv", na = c("NA", "", ".")) |>
+  janitor::clean_names()|>
+  rename(first_name = baker) |>
+  mutate(first_name = gsub("\"", "", first_name)) 
+
+results_df = 
+  read_csv("./gbb_datasets/results.csv", na = c("NA", "", "."), skip = 2) |>
+  janitor::clean_names() |>
+  rename(first_name = baker)
+
+bakes_results_df = 
+  full_join(bakes_df, results_df, by = c("series", "episode", "first_name")) |>
+  pivot_wider(
+    names_from = episode,
+    values_from = c(signature_bake, show_stopper, technical, result)
+  )
+
+gbboff_df = 
+  full_join(bakers_df, bakes_results_df, by = c("series", "first_name"))
+
+bakers_check = anti_join(bakers_df, bakes_results_df) 
+
+```
+
+First, I imported `bakers.csv` file and cleaned it using `janitor::clean_names`. Then, I separated the `name` variable into `first_name` and `last_name` for later binding as other files (e.g.`bakes.csv` and `results.csv`) only had first name under baker information. Next, I arranged the data in the ascending series order and relocated the data set to have series and first name as first two columns.
+
+Similarly, I imported and cleaned `bakes.csv` and `results.csv` files. I renamed `baker` as `first_name` so that the variable for baker information aligns for all three data sets. Also, for `bakes.csv`, I eliminated unnecessary `""` marks in a value under `first_name` variable.  
+
+I combined these two data sets into a data frame named `bakes_results_df` and organized the data using `pivot_wider` function to tidy up the data for further binding with `bakers_df` data set. 
+
+`bakers_df` and `bakes_results_df` were merged using `full_join` function and the data frame was named as `gbboff_df`. `anti_join` was used to see if the merge was performed correctly. It was confirmed that the data sets were merged successfully and correctly as an empty tibble was generated using `anti_join`. 
+
+
+```{r gbboff_export}
+write.csv(gbboff_df, "./gbb_datasets/gbboff_merged_file.csv")
+```
+
+```{r gbboff_table}
+
+
+```
+
+
+Create a reader-friendly table showing the star baker or winner of each episode in Seasons 5 through 10. Comment on this table – were there any predictable overall winners? Any surprises?
+
+
+
+```{r gbboff_viewer}
+viewers_df = read_csv("gbb_datasets/viewers.csv", na = c("NA", "", ".")) |>
+  janitor::clean_names()
+
+head(viewers_df)
+
+avg_viewers_s1 = 
+  select(viewers_df, series_1) |> 
+  drop_na() |>
+  pull() |>
+  mean()
+
+avg_viewers_s5 = 
+  select(viewers_df, series_5) |>
+  pull() |>
+  mean()
+```
+
+The viewership data in `viewers.csv` was imported and cleaned. The first 10 rows of the dataset is displayed using `head` function. The average viewership in Season 1 is `r avg_viewers_s1` and in Season 5 is `r avg_viewers_s5`. 
+
+
 
 
