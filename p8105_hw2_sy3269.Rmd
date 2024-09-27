@@ -231,20 +231,49 @@ write.csv(gbboff_df, "./gbb_datasets/gbboff_merged_file.csv")
 ```
 
 ```{r gbboff_table}
+gbboff_winner = 
+  gbboff_df |>
+  select(series, first_name, result_1:result_10) |>
+  pivot_longer(
+    cols = result_1:result_10, 
+    names_to = "episode", 
+    values_to = "result"
+  ) |> 
+  filter(result == "STAR BAKER", series > 4) |>
+  mutate(
+    episode = case_match(
+      episode,
+      "result_1" ~ 1,
+      "result_2" ~ 2,
+      "result_3" ~ 3,
+      "result_4" ~ 4,
+      "result_5" ~ 5,
+      "result_6" ~ 6,
+      "result_7" ~ 7,
+      "result_8" ~ 8,
+      "result_9" ~ 9,
+      "result_10" ~ 10,
+    ))
 
+clean_gbboff_winner = 
+  gbboff_winner |>
+  relocate(series, episode)|>
+  arrange(series, episode) |>
+  knitr::kable()
 
+clean_gbboff_winner
 ```
 
+From the merged data set, only the series, episode, baker name and result of the competition information was selected to create a new data frame of the Great British Bake Off winner (or star baker) of each episode in Season 5 to 10. To make the data set more human-readable, the data frame was reformatted using `pivot_longer` and organized using `knitr::kable`. 
 
-Create a reader-friendly table showing the star baker or winner of each episode in Seasons 5 through 10. Comment on this table – were there any predictable overall winners? Any surprises?
-
+From the table, it is surprising to see some of the bakers win multiple times in one season. For instance, Richard became the *star baker* five times in Season 5, and Steph was a four time *star baker* in Season 10. 
 
 
 ```{r gbboff_viewer}
 viewers_df = read_csv("gbb_datasets/viewers.csv", na = c("NA", "", ".")) |>
   janitor::clean_names()
 
-head(viewers_df)
+head(viewers_df, n = 10)
 
 avg_viewers_s1 = 
   select(viewers_df, series_1) |> 
@@ -259,7 +288,4 @@ avg_viewers_s5 =
 ```
 
 The viewership data in `viewers.csv` was imported and cleaned. The first 10 rows of the dataset is displayed using `head` function. The average viewership in Season 1 is `r avg_viewers_s1` and in Season 5 is `r avg_viewers_s5`. 
-
-
-
 
