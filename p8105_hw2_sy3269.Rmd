@@ -198,13 +198,16 @@ bakers_df =
       
 bakes_df = 
   read_csv("./gbb_datasets/bakes.csv", na = c("NA", "", ".")) |>
-  janitor::clean_names()|>
+  janitor::clean_names() |>
   mutate(baker = gsub("\"", "", baker)) 
 
 results_df = 
   read_csv("./gbb_datasets/results.csv", na = c("NA", "", "."), skip = 2) |>
-  janitor::clean_names() 
-
+  janitor::clean_names() |>
+  mutate(
+    baker = replace(baker, baker == "Joanne", "Jo")
+  )
+  
 bakes_results_df = 
   full_join(bakes_df, results_df, by = c("series", "episode", "baker")) |>
   pivot_wider(
@@ -220,7 +223,7 @@ bakers_check = anti_join(bakers_df, bakes_results_df)
 
 First, I imported `bakers.csv` file and cleaned it using `janitor::clean_names`. Then, I separated the `name` variable into `baker` and `baker_last_name` for later binding as other files (e.g.`bakes.csv` and `results.csv`) did not have last name information under `baker` variable. Next, I arranged the data in the ascending series order and relocated the data set to have series and first name as first two columns.
 
-Similarly, I imported and cleaned `bakes.csv` and `results.csv` files. For `bakes.csv`, I eliminated unnecessary `""` marks in a value under `baker` variable (e.g. Jo was input as "Jo").
+Similarly, I imported and cleaned `bakes.csv` and `results.csv` files. For `bakes.csv`, I eliminated unnecessary `""` marks in a value under `baker` variable (e.g. Jo was input as "Jo"). For `results.csv`, I changed a name of a baker in Season 2 Episode 1 from Joanne to Jo so that this value aligns with that of the other data frames. This person is input as Jo under baker information in other csv files. 
 
 Next, I combined the latter two data sets into one data frame named `bakes_results_df` and reformatted the data using `pivot_wider` function for further binding with `bakers_df` data set. In this new data frame, there are ten columns, corresponding to ten episodes, for each *signature_baker*, *show_stopper*, *technical*, and *result* information in ascending episode number. 
 
