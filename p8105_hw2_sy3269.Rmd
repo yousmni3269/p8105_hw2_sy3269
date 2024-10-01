@@ -64,17 +64,24 @@ new_metro_df =
   pivot_longer( 
     cols = route1:route11,
     names_to = "route_number",
-    values_to = "route_name",
-    names_prefix = "route"
+    values_to = "route_name"
   )
 ```
 
 The data set was reformatted so that `route number` and `route name` are distinct variables. 
 
 ```{r, station_for_A}
-stn_for_A = distinct(new_metro_df, route_name == "A", ada) 
+stn_for_A = 
+  new_metro_df |>
+  filter(route_name == "A") |>
+  select(station_name, line) |>
+  distinct()
 
-stn_for_A_ada = filter(stn_for_A, ada == TRUE)
+stn_for_A_ada = 
+  new_metro_df |>
+  filter(route_name == "A", ada ==TRUE) |>
+  select(station_name, line) |>
+  distinct()
 ```
 
 There are `r count(stn_for_A)` stations that serve the A train and `r count(stn_for_A_ada)` of these stations are ADA compliant. 
@@ -86,12 +93,12 @@ There are `r count(stn_for_A)` stations that serve the A train and `r count(stn_
 
 ```{r, mr_trash_wheel}
 mr_tw_df = 
-  read_excel("./202309 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel",
-  range = cell_cols("A:N"),
-  skip = 1, 
-  n_max = 584,
-  na = c("NA", "", "."),
-  .name_repair = "unique") |>
+  read_excel("./202409 Trash Wheel Collection Data.xlsx", 
+    sheet = "Mr. Trash Wheel",
+    skip = 1, 
+    n_max = 651,
+    na = c("NA", "", "."),
+    .name_repair = "unique") |>
   janitor::clean_names() |>
   mutate(
     sports_balls = 
@@ -102,19 +109,24 @@ mr_tw_df =
     trash_wheel_type = "mr_trash_wheel") |>
   arrange(year, month) 
 
+mr_tw_df = 
+  mr_tw_df |>
+  select(-starts_with("x"))
+
 head(mr_tw_df)
 tail(mr_tw_df)
 ```
 
-Mr. Trash Wheel excel sheet was imported as `mr_tw_df`and was cleaned. Any unnecessary data, such as non-dumpster specific data or figure, was removed and required columns were specified for the import. Also, `trash_wheel_type` variable was added to the data frame so that I can keep track of which trash wheel data is which when I bind this data frame with other trash wheel data. Head and tail of the cleaned data was checked. 
+Mr. Trash Wheel excel sheet from 2024 data set was imported as `mr_tw_df`and was cleaned. Any unnecessary data, such as non-dumpster specific data, was removed and `trash_wheel_type` variable was added to the data frame so that I can keep track of which trash wheel data is which when I later bind this data frame with other trash wheel data. The data was arranged in the order of time. 
+
+The data was checked once again and any unnecessary empty columns created after importing was deleted. Head and tail of the cleaned data was checked. 
 
 
 ``` {r prof_gwyn}
 prof_tw_df = 
-  read_excel("./202309 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", 
-  range = cell_cols("A:M"),
+  read_excel("./202409 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", 
   skip = 1, 
-  n_max = 106, 
+  n_max = 118, 
   na = c("NA", "", "."),
   .name_repair = "unique") |>
   janitor::clean_names() |>
@@ -122,15 +134,14 @@ prof_tw_df =
   arrange(year, month)
 
 gwyn_tw_df = read_excel(
-  "./202309 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel", 
-  range = cell_cols("A:L"),
+  "./202409 Trash Wheel Collection Data.xlsx", sheet = "Gwynnda Trash Wheel", 
   skip = 1, 
-  n_max = 154,
+  n_max = 263,
   na = c("NA", "", "."),
   .name_repair = "unique") |>
   janitor::clean_names() |>
   mutate(trash_wheel_type = "gwynnda_trash_wheel") |>
-  arrange(year, month)
+  arrange(year, month) 
 
 head(prof_tw_df)
 tail(prof_tw_df)
@@ -141,6 +152,8 @@ tail(gwyn_tw_df)
 Professor Trash Wheel and Gwynnda Trash Wheel excel sheets were also imported and cleaned so that I have only necessary dumpster-specific data. Similar to Mr. Trash Wheel data, any variable required to keep track of trash wheel type when all data sets are binded together was added to both Professor and Gwynnda data sets.
 
 Head and tail of each cleaned data set was checked. 
+
+It was noticed that there are two observations from dumpster 21 in Gwynnada Trash Wheel data set. 
 
 
 ```{r three_summary}
@@ -174,7 +187,7 @@ cb_gwyn_tw_df =
 
 Professor Trash Wheel, Gwynnda Trash Wheel and Mr. Trash Wheel data were all combined into one data set named `comb_tw_df`. In the merged data set, total `r nrow(comb_tw_df)` observations were found, where `r nrow(prof_tw_df)` observations came from Professor Trash Wheel, `r nrow(gwyn_tw_df)` from Gwynnda Trash Wheel, and `r nrow(mr_tw_df)` from Mr. Trash Wheel. 
 
-The observations are collected from May 2014 to June 2023 by Mr. Trash Wheel; 2017 April to June 2023, Professor Trash Wheel; August 2021 to May 2023, Gwynnda Trash Wheel. 
+The observations are collected from August 2014 to May 2024 by Mr. Trash Wheel; April 2017 to May 2024, Professor Trash Wheel; August 2021 to May 2024, Gwynnda Trash Wheel. 
 
 There are `r length(trash_types)` types of trash collected by three different Trash Wheels and they are as follows: `r trash_types`. 
 
